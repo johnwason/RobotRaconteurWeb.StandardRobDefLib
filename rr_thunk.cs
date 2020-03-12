@@ -2354,14 +2354,21 @@ public class EventLogType
     public string event_type;
 }
 
-[RobotRaconteurServiceStruct("com.robotraconteur.eventlog.EventLogMessage")]
-public class EventLogMessage
+[RobotRaconteurServiceStruct("com.robotraconteur.eventlog.EventLogMessageHeader")]
+public class EventLogMessageHeader
 {
     public EventLogType type;
     public EventLogLevel level;
-    public ulong number;
-    public ulong sequence_number;
+    public com.robotraconteur.identifier.Identifier source_device;
+    public string source_component;
+    public ulong message_number;
     public com.robotraconteur.datetime.DateTimeUTC timestamp;
+}
+
+[RobotRaconteurServiceStruct("com.robotraconteur.eventlog.EventLogMessage")]
+public class EventLogMessage
+{
+    public EventLogMessageHeader header;
     public string title;
     public string message;
     public Dictionary<string,object> extended;
@@ -2402,22 +2409,26 @@ public class com__robotraconteur__eventlogFactory : ServiceFactory
 {
     public override string DefString()
 {
-    const string s="service com.robotraconteur.eventlog\n\nstdver 0.9\n\nimport com.robotraconteur.identifier\nimport com.robotraconteur.datetime\nimport com.robotraconteur.device\n\nusing com.robotraconteur.identifier.Identifier\nusing com.robotraconteur.datetime.DateTimeUTC\nusing com.robotraconteur.device.DeviceInfo\n\nenum EventLogLevel\nundefined = 0,\ndebug = 1,\ninfo,\nwarning,\nrecoverable_error,\nsafety_violation_error,\nfatal_error,\nemergency_error,\ncatastrophic_error\nend\n\nstruct EventLogType\nfield Identifier event_category\nfield string event_type\nend\n\nstruct EventLogMessage\nfield EventLogType type\nfield EventLogLevel level\nfield uint64 number\nfield uint64 sequence_number\nfield DateTimeUTC timestamp\nfield string title\nfield string message\nfield varvalue{string} extended\nend\n\nobject EventLog\nproperty DeviceInfo device_info [readonly,nolock]\nproperty uint64 message_count [readonly]\nfunction EventLogMessage{list} getf_messages(uint64 offset, uint64 count)\npipe EventLogMessage message_stream [readonly]\nfunction void clear_messages(uint64 offset, uint64 count)\nfunction void clear_all_messages()\nend\n\n";
+    const string s="service com.robotraconteur.eventlog\n\nstdver 0.9\n\nimport com.robotraconteur.identifier\nimport com.robotraconteur.datetime\nimport com.robotraconteur.device\n\nusing com.robotraconteur.identifier.Identifier\nusing com.robotraconteur.datetime.DateTimeUTC\nusing com.robotraconteur.device.DeviceInfo\n\nenum EventLogLevel\nundefined = 0,\ndebug = 1,\ninfo,\nwarning,\nrecoverable_error,\nsafety_violation_error,\nfatal_error,\nemergency_error,\ncatastrophic_error\nend\n\nstruct EventLogType\nfield Identifier event_category\nfield string event_type\nend\n\nstruct EventLogMessageHeader\nfield EventLogType type\nfield EventLogLevel level\nfield Identifier source_device\nfield string source_component\nfield uint64 message_number\nfield DateTimeUTC timestamp\nend\n\nstruct EventLogMessage\nfield EventLogMessageHeader header\nfield string title\nfield string message\nfield varvalue{string} extended\nend\n\nobject EventLog\nproperty DeviceInfo device_info [readonly,nolock]\nproperty uint64 message_count [readonly]\nfunction EventLogMessage{list} getf_messages(uint64 offset, uint64 count)\npipe EventLogMessage message_stream [readonly]\nfunction void clear_messages(uint64 offset, uint64 count)\nfunction void clear_all_messages()\nend\n\n";
     return s;
     }
     public override string GetServiceName() {return "com.robotraconteur.eventlog";}
     public EventLogType_stub EventLogType_stubentry;
+    public EventLogMessageHeader_stub EventLogMessageHeader_stubentry;
     public EventLogMessage_stub EventLogMessage_stubentry;
     public com__robotraconteur__eventlogFactory() : this(null,null) {}
     public com__robotraconteur__eventlogFactory(RobotRaconteurNode node = null, ClientContext context = null) : base(node,context)
     {
     EventLogType_stubentry=new EventLogType_stub(this,this.node,this.context);
+    EventLogMessageHeader_stubentry=new EventLogMessageHeader_stub(this,this.node,this.context);
     EventLogMessage_stubentry=new EventLogMessage_stub(this,this.node,this.context);
     }
     public override IStructureStub FindStructureStub(string objecttype)
     {
     if (objecttype=="EventLogType")
     return EventLogType_stubentry;
+    if (objecttype=="EventLogMessageHeader")
+    return EventLogMessageHeader_stubentry;
     if (objecttype=="EventLogMessage")
     return EventLogMessage_stubentry;
     throw new DataTypeException("Cannot find appropriate structure stub");
@@ -2496,6 +2507,37 @@ public class EventLogType_stub : IStructureStub {
     }
 }
 
+public class EventLogMessageHeader_stub : IStructureStub {
+    public EventLogMessageHeader_stub(com__robotraconteur__eventlogFactory d, RobotRaconteurNode node, ClientContext context) {def=d; rr_node=node; rr_context=context;}
+    private com__robotraconteur__eventlogFactory def;
+    private RobotRaconteurNode rr_node;
+    private ClientContext rr_context;
+    public MessageElementStructure PackStructure(object s1) {
+    List<MessageElement> m=new List<MessageElement>();
+    if (s1 ==null) return null;
+    EventLogMessageHeader s = (EventLogMessageHeader)s1;
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackStructure(rr_node, rr_context, "type",s.type));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackEnum<EventLogLevel>("level",s.level));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackStructure(rr_node, rr_context, "source_device",s.source_device));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackString("source_component",s.source_component));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<ulong>("message_number",s.message_number));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackPodToArray<com.robotraconteur.datetime.DateTimeUTC>(rr_node, rr_context, "timestamp",ref s.timestamp));
+    return new MessageElementStructure("com.robotraconteur.eventlog.EventLogMessageHeader",m);
+    }
+    public T UnpackStructure<T>(MessageElementStructure m) {
+    if (m == null ) return default(T);
+    EventLogMessageHeader s=new EventLogMessageHeader();
+    s.type =MessageElementUtil.UnpackStructure<EventLogType>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"type"));
+    s.level =MessageElementUtil.UnpackEnum<EventLogLevel>(MessageElement.FindElement(m.Elements,"level"));
+    s.source_device =MessageElementUtil.UnpackStructure<com.robotraconteur.identifier.Identifier>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"source_device"));
+    s.source_component =MessageElementUtil.UnpackString(MessageElement.FindElement(m.Elements,"source_component"));
+    s.message_number =(MessageElementUtil.UnpackScalar<ulong>(MessageElement.FindElement(m.Elements,"message_number")));
+    s.timestamp =MessageElementUtil.UnpackPodFromArray<com.robotraconteur.datetime.DateTimeUTC>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"timestamp"));
+    T st; try {st=(T)((object)s);} catch (InvalidCastException) {throw new DataTypeMismatchException("Wrong structuretype");}
+    return st;
+    }
+}
+
 public class EventLogMessage_stub : IStructureStub {
     public EventLogMessage_stub(com__robotraconteur__eventlogFactory d, RobotRaconteurNode node, ClientContext context) {def=d; rr_node=node; rr_context=context;}
     private com__robotraconteur__eventlogFactory def;
@@ -2505,11 +2547,7 @@ public class EventLogMessage_stub : IStructureStub {
     List<MessageElement> m=new List<MessageElement>();
     if (s1 ==null) return null;
     EventLogMessage s = (EventLogMessage)s1;
-    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackStructure(rr_node, rr_context, "type",s.type));
-    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackEnum<EventLogLevel>("level",s.level));
-    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<ulong>("number",s.number));
-    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<ulong>("sequence_number",s.sequence_number));
-    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackPodToArray<com.robotraconteur.datetime.DateTimeUTC>(rr_node, rr_context, "timestamp",ref s.timestamp));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackStructure(rr_node, rr_context, "header",s.header));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackString("title",s.title));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackString("message",s.message));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackMapType<string,object>(rr_node, rr_context, "extended",s.extended));
@@ -2518,11 +2556,7 @@ public class EventLogMessage_stub : IStructureStub {
     public T UnpackStructure<T>(MessageElementStructure m) {
     if (m == null ) return default(T);
     EventLogMessage s=new EventLogMessage();
-    s.type =MessageElementUtil.UnpackStructure<EventLogType>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"type"));
-    s.level =MessageElementUtil.UnpackEnum<EventLogLevel>(MessageElement.FindElement(m.Elements,"level"));
-    s.number =(MessageElementUtil.UnpackScalar<ulong>(MessageElement.FindElement(m.Elements,"number")));
-    s.sequence_number =(MessageElementUtil.UnpackScalar<ulong>(MessageElement.FindElement(m.Elements,"sequence_number")));
-    s.timestamp =MessageElementUtil.UnpackPodFromArray<com.robotraconteur.datetime.DateTimeUTC>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"timestamp"));
+    s.header =MessageElementUtil.UnpackStructure<EventLogMessageHeader>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"header"));
     s.title =MessageElementUtil.UnpackString(MessageElement.FindElement(m.Elements,"title"));
     s.message =MessageElementUtil.UnpackString(MessageElement.FindElement(m.Elements,"message"));
     s.extended =MessageElementUtil.UnpackMap<string,object>(rr_node, rr_context, MessageElement.FindElement(m.Elements,"extended"));
@@ -17754,6 +17788,7 @@ public class JointLimits
 {
     public double lower;
     public double upper;
+    public double home;
     public double velocity;
     public double acceleration;
     public double effort;
@@ -17856,7 +17891,7 @@ public class com__robotraconteur__robotics__jointsFactory : ServiceFactory
 {
     public override string DefString()
 {
-    const string s="service com.robotraconteur.robotics.joints\n\nstdver 0.9\n\nimport com.robotraconteur.units\nimport com.robotraconteur.identifier\n\nusing com.robotraconteur.units.SIUnit\nusing com.robotraconteur.identifier.Identifier\n\nenum JointPositionUnits\nimplicit = 0,\nmeter,\nradian,\ndegree,\n# ticks_lin = m/(2^20)\nticks_lin,\n# ticks_rot = rev/(2^20)\nticks_rot,\n# nanoticks_lin = nm/(2^20)\nnanoticks_lin,\n# nanoticks_rot = nrev/(2^20)\nnanoticks_rot\nend\n\nenum JointVelocityUnits\nimplicit = 0,\nmeter_second = 16,\nradian_second,\ndegree_second,\nticks_lin_second,\nticks_rot_second,\nnanoticks_lin_second,\nnanoticks_rot_second\nend\n\nenum JointAccelerationUnits\nimplicit = 0,\nmeter_second2 = 32,\nradian_second2,\ndegree_second2,\nticks_lin_second2,\nticks_rot_second2,\nnanoticks_lin_second2,\nnanoticks_rot_second2\nend\n\nenum JointJerkUnits\nimplicit = 0,\nmeter_second2 = 48,\nradian_second3,\ndegree_second3,\nticks_lin_second3,\nticks_rot_second3,\nnanoticks_lin_second3,\nnanoticks_rot_second3\nend\n\nenum JointEffortUnits\nimplicit = 0,\nnewton = 64,\nnewton_meter,\nampere,\nvolt,\npascal,\ncoulomb,\ntesla,\nweber,\nmeter_second2,\nradian_second2,\ndegree_second2\nend\n\nenum JointType\nunknown = 0,\nrevolute,\ncontinuous,\nprismatic,\nwheel,\nscrew,\nother,\n# Compound joint types\nrevolute2,\nuniversal,\nball,\nplanar,\nfloating,\nother_compound\nend\n\nstruct JointLimits\nfield double lower\nfield double upper\nfield double velocity\nfield double acceleration\nfield double effort\nend\n\nstruct JointInfo\nfield Identifier joint_identifier\nfield JointType joint_type\nfield JointLimits joint_limits\nfield JointPositionUnits default_units\nfield JointEffortUnits default_effort_units\nfield bool passive\nfield varvalue{string} extended\nend\n\n";
+    const string s="service com.robotraconteur.robotics.joints\n\nstdver 0.9\n\nimport com.robotraconteur.units\nimport com.robotraconteur.identifier\n\nusing com.robotraconteur.units.SIUnit\nusing com.robotraconteur.identifier.Identifier\n\nenum JointPositionUnits\nimplicit = 0,\nmeter,\nradian,\ndegree,\n# ticks_lin = m/(2^20)\nticks_lin,\n# ticks_rot = rev/(2^20)\nticks_rot,\n# nanoticks_lin = nm/(2^20)\nnanoticks_lin,\n# nanoticks_rot = nrev/(2^20)\nnanoticks_rot\nend\n\nenum JointVelocityUnits\nimplicit = 0,\nmeter_second = 16,\nradian_second,\ndegree_second,\nticks_lin_second,\nticks_rot_second,\nnanoticks_lin_second,\nnanoticks_rot_second\nend\n\nenum JointAccelerationUnits\nimplicit = 0,\nmeter_second2 = 32,\nradian_second2,\ndegree_second2,\nticks_lin_second2,\nticks_rot_second2,\nnanoticks_lin_second2,\nnanoticks_rot_second2\nend\n\nenum JointJerkUnits\nimplicit = 0,\nmeter_second2 = 48,\nradian_second3,\ndegree_second3,\nticks_lin_second3,\nticks_rot_second3,\nnanoticks_lin_second3,\nnanoticks_rot_second3\nend\n\nenum JointEffortUnits\nimplicit = 0,\nnewton = 64,\nnewton_meter,\nampere,\nvolt,\npascal,\ncoulomb,\ntesla,\nweber,\nmeter_second2,\nradian_second2,\ndegree_second2\nend\n\nenum JointType\nunknown = 0,\nrevolute,\ncontinuous,\nprismatic,\nwheel,\nscrew,\nother,\n# Compound joint types\nrevolute2,\nuniversal,\nball,\nplanar,\nfloating,\nother_compound\nend\n\nstruct JointLimits\nfield double lower\nfield double upper\nfield double home\nfield double velocity\nfield double acceleration\nfield double effort\nend\n\nstruct JointInfo\nfield Identifier joint_identifier\nfield JointType joint_type\nfield JointLimits joint_limits\nfield JointPositionUnits default_units\nfield JointEffortUnits default_effort_units\nfield bool passive\nfield varvalue{string} extended\nend\n\n";
     return s;
     }
     public override string GetServiceName() {return "com.robotraconteur.robotics.joints";}
@@ -17934,6 +17969,7 @@ public class JointLimits_stub : IStructureStub {
     JointLimits s = (JointLimits)s1;
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<double>("lower",s.lower));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<double>("upper",s.upper));
+    MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<double>("home",s.home));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<double>("velocity",s.velocity));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<double>("acceleration",s.acceleration));
     MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackScalar<double>("effort",s.effort));
@@ -17944,6 +17980,7 @@ public class JointLimits_stub : IStructureStub {
     JointLimits s=new JointLimits();
     s.lower =(MessageElementUtil.UnpackScalar<double>(MessageElement.FindElement(m.Elements,"lower")));
     s.upper =(MessageElementUtil.UnpackScalar<double>(MessageElement.FindElement(m.Elements,"upper")));
+    s.home =(MessageElementUtil.UnpackScalar<double>(MessageElement.FindElement(m.Elements,"home")));
     s.velocity =(MessageElementUtil.UnpackScalar<double>(MessageElement.FindElement(m.Elements,"velocity")));
     s.acceleration =(MessageElementUtil.UnpackScalar<double>(MessageElement.FindElement(m.Elements,"acceleration")));
     s.effort =(MessageElementUtil.UnpackScalar<double>(MessageElement.FindElement(m.Elements,"effort")));
@@ -19851,8 +19888,8 @@ public interface Robot
     Task set_operational_mode(RobotOperationalMode value, CancellationToken cancel=default(CancellationToken));
     Task<RobotControllerState> get_controller_state(CancellationToken cancel=default(CancellationToken));
     Task set_controller_state(RobotControllerState value, CancellationToken cancel=default(CancellationToken));
-    Task<List<RobotErrorCategory>> get_current_errors(CancellationToken cancel=default(CancellationToken));
-    Task set_current_errors(List<RobotErrorCategory> value, CancellationToken cancel=default(CancellationToken));
+    Task<List<com.robotraconteur.eventlog.EventLogMessageHeader>> get_current_errors(CancellationToken cancel=default(CancellationToken));
+    Task set_current_errors(List<com.robotraconteur.eventlog.EventLogMessageHeader> value, CancellationToken cancel=default(CancellationToken));
     Task<double> get_speed_ratio(CancellationToken cancel=default(CancellationToken));
     Task set_speed_ratio(double value, CancellationToken cancel=default(CancellationToken));
     Task<uint> get_update_downsample(CancellationToken cancel=default(CancellationToken));
@@ -19926,31 +19963,6 @@ public static class com__robotraconteur__robotics__robotConstants  {
     emergency_stop = 5,
     emergency_stop_reset = 6
     };
-    public enum RobotErrorCategory
-    {
-    unknown = 0,
-    invalid_operation = 1,
-    invalid_argument = 2,
-    invalid_command = 3,
-    invalid_mode = 4,
-    hardware_fault = 5,
-    software_fault = 6,
-    communication_failure = 7,
-    kinematic_error = 8,
-    dynamic_error = 9,
-    overload_error = 10,
-    command_error = 11,
-    user_software_error = 12,
-    collision_imminent = 13,
-    collision_occured = 14,
-    sensor_failure = 15,
-    sensor_out_of_range = 16,
-    safety_violation = 17,
-    workspace_violation = 18,
-    workspace_intrusion = 19,
-    estop_active = 20,
-    guard_stop = 21
-    };
     public enum RobotCapabilities
     {
     unknown = 0,
@@ -19999,7 +20011,7 @@ public class com__robotraconteur__robotics__robotFactory : ServiceFactory
 {
     public override string DefString()
 {
-    const string s="service com.robotraconteur.robotics.robot\n\nstdver 0.9\n\nimport com.robotraconteur.geometry\nimport com.robotraconteur.sensordata\nimport com.robotraconteur.device\nimport com.robotraconteur.signal\nimport com.robotraconteur.param\nimport com.robotraconteur.robotics.joints\nimport com.robotraconteur.robotics.tool\nimport com.robotraconteur.robotics.payload\nimport com.robotraconteur.robotics.trajectory\nimport com.robotraconteur.identifier\nimport com.robotraconteur.action\n\nusing com.robotraconteur.geometry.Point\nusing com.robotraconteur.geometry.Vector3\nusing com.robotraconteur.geometry.Transform\nusing com.robotraconteur.geometry.SpatialInertia\nusing com.robotraconteur.geometry.Pose\nusing com.robotraconteur.geometry.SpatialVelocity\nusing com.robotraconteur.geometry.SpatialAcceleration\nusing com.robotraconteur.sensordata.SensorDataHeader\nusing com.robotraconteur.device.DeviceInfo\nusing com.robotraconteur.signal.SignalInfo\nusing com.robotraconteur.robotics.joints.JointInfo\nusing com.robotraconteur.robotics.tool.ToolInfo\nusing com.robotraconteur.robotics.payload.PayloadInfo\nusing com.robotraconteur.param.ParameterInfo\nusing com.robotraconteur.robotics.trajectory.TrajectoryStatus\nusing com.robotraconteur.robotics.trajectory.JointTrajectory\nusing com.robotraconteur.identifier.Identifier\nusing com.robotraconteur.action.ActionStatusCode\n\nenum RobotType\nunknown = 0,\nserial = 1,\ndual_arm,\ndifferential_drive,\nplanar,\nfloating,\nfreeform,\nother\nend\n\nenum RobotCommandMode\ninvalid_state = -1,\nhalt = 0,\njog,\ntrajectory,\nposition_command,\nvelocity_command,\nhoming\nend\n\nenum RobotOperationalMode\nundefined = 0,\nmanual_reduced_speed,\nmanual_full_speed,\nauto,\ncobot\nend\n\nenum RobotControllerState\nundefined = 0,\ninit = 1,\nmotor_on,\nmotor_off,\nguard_stop,\nemergency_stop,\nemergency_stop_reset\nend\n\nenum RobotErrorCategory\nunknown = 0,\ninvalid_operation,\ninvalid_argument,\ninvalid_command,\ninvalid_mode,\nhardware_fault,\nsoftware_fault,\ncommunication_failure,\nkinematic_error,\ndynamic_error,\noverload_error,\ncommand_error,\nuser_software_error,\ncollision_imminent,\ncollision_occured,\nsensor_failure,\nsensor_out_of_range,\nsafety_violation,\nworkspace_violation,\nworkspace_intrusion,\nestop_active,\nguard_stop\nend\n\nenum RobotCapabilities\nunknown = 0,\njog_command = 0x1,\ntrajectory_command = 0x2,\nposition_command = 0x4,\nvelocity_command = 0x8,\nhoming_command = 0x10,\nsoftware_reset_errors = 0x20,\nsoftware_enable = 0x40\nend\n\nenum RobotStateFlags\nunknown = 0,\nerror = 0x1,\nfatal_error = 0x2,\nestop = 0x4,\nestop_button1 = 0x8,\nestop_button2 = 0x10,\nestop_button3 = 0x20,\nestop_button4 = 0x40,\nestop_guard1 = 0x80,\nestop_guard2 = 0x100,\nestop_guard3 = 0x200,\nestop_guard4 = 0x400,\nestop_software = 0x800,\nestop_fault = 0x1000,\nestop_internal = 0x2000,\nestop_other = 0x4000,\nestop_released = 0x8000,\nenabling_switch = 0x10000,\nenabled = 0x20000,\nready = 0x40000,\nhomed = 0x80000,\nhoming_required = 0x100000,\ncommunication_failure = 0x200000,\nvalid_position_command = 0x1000000,\nvalid_velocity_command = 0x2000000,\ntrajectory_running = 0x4000000\nend\n\nstruct RobotKinChainInfo\nfield Identifier kin_chain_identifier\nfield Vector3[] H\nfield Vector3[] P\nfield SpatialInertia[] link_inertias\nfield Identifier{list} link_identifiers\nfield uint32[] joint_numbers\nfield Pose flange_pose\nfield Identifier flange_identifier\nfield ToolInfo current_tool\nfield PayloadInfo current_payload\nfield SpatialVelocity tcp_max_velocity\nfield SpatialAcceleration tcp_max_acceleration\nfield varvalue{string} extended\nend\n\nstruct RobotInfo\nfield DeviceInfo device_info\nfield RobotType robot_type\nfield JointInfo{list} joint_info\nfield RobotKinChainInfo{list} chains\nfield uint32 robot_capabilities\nfield SignalInfo{list} signal_info\nfield ParameterInfo{list} parameter_info\nfield uint16 config_seqno\nfield varvalue{string} extended\nend\n\nstruct RobotState\nfield uint64 seqno\nfield RobotCommandMode command_mode\nfield RobotOperationalMode operational_mode\nfield RobotControllerState controller_state\nfield uint64 robot_state_flags\nfield double[] joint_position\nfield double[] joint_velocity\nfield double[] joint_effort\nfield double[] joint_position_command\nfield double[] joint_velocity_command\nfield Pose[] kin_chain_tcp\nfield SpatialVelocity[] kin_chain_tcp_vel\nfield bool trajectory_running\nend\n\nstruct AdvancedRobotState\nfield uint64 seqno\nfield RobotCommandMode command_mode\nfield RobotOperationalMode operational_mode\nfield RobotControllerState controller_state\nfield uint64 robot_state_flags\nfield double[] joint_position\nfield double[] joint_velocity\nfield double[] joint_effort\nfield double[] joint_position_command\nfield double[] joint_velocity_command\nfield uint8[] joint_position_units\nfield uint8[] joint_effort_units\nfield Pose[] kin_chain_tcp\nfield SpatialVelocity[] kin_chain_tcp_vel\nfield bool trajectory_running\nfield double trajectory_time\nfield double trajectory_max_time\nfield uint32 trajectory_current_waypoint\nfield uint16 config_seqno\nend\n\nstruct RobotStateSensorData\nfield SensorDataHeader data_header\nfield AdvancedRobotState robot_state\nend\n\nstruct RobotJointCommand\nfield uint64 seqno\nfield uint64 state_seqno\nfield double[] command\n# Use JointUnits values\nfield uint8[] units\nend\n\nobject Robot\nproperty RobotInfo robot_info [readonly,nolock]\nproperty RobotCommandMode command_mode [nolockread]\nproperty RobotOperationalMode operational_mode [readonly, nolock]\nproperty RobotControllerState controller_state [readonly, nolock]\nproperty RobotErrorCategory{list} current_errors [readonly, nolock]\nfunction void halt() [urgent]\nfunction void enable()\nfunction void disable() [urgent]\nfunction void reset_errors()\nproperty double speed_ratio\nfunction void jog_joint(double[] joint_position, double[] max_velocity, bool relative, bool wait)\nfunction void jog_cartesian(Pose{int32} target_pose, SpatialVelocity{int32} max_velocity, bool relative, bool wait)\nfunction TrajectoryStatus{generator} execute_trajectory(JointTrajectory trajectory)\nwire RobotState robot_state [readonly,nolock]\nwire AdvancedRobotState advanced_robot_state [readonly,nolock]\npipe RobotStateSensorData robot_state_sensor_data [readonly,nolock]\nproperty uint32 update_downsample [perclient]\nproperty double update_rate [readonly]\nwire RobotJointCommand position_command [writeonly]\nwire RobotJointCommand velocity_command [writeonly]\nfunction ActionStatusCode{generator} home()\nfunction double[] getf_signal(string signal_name)\nfunction void setf_signal(string signal_name, double[] value)\nfunction void tool_attached(int32 chain, ToolInfo tool)\nfunction void tool_detached(int32 chain, string tool_name)\nevent tool_changed(int32 chain, string tool_name)\nfunction void payload_attached(int32 chain, PayloadInfo payload, Pose pose)\nfunction void payload_detached(int32 chain, string payload_name)\nevent payload_changed(int32 chain, string payload_name)\nfunction varvalue getf_param(string param_name)\nfunction void setf_param(string param_name, varvalue value)\nevent param_changed(string param_name)\nend\n\n\n\n";
+    const string s="service com.robotraconteur.robotics.robot\n\nstdver 0.9\n\nimport com.robotraconteur.geometry\nimport com.robotraconteur.sensordata\nimport com.robotraconteur.device\nimport com.robotraconteur.signal\nimport com.robotraconteur.param\nimport com.robotraconteur.robotics.joints\nimport com.robotraconteur.robotics.tool\nimport com.robotraconteur.robotics.payload\nimport com.robotraconteur.robotics.trajectory\nimport com.robotraconteur.identifier\nimport com.robotraconteur.action\nimport com.robotraconteur.eventlog\n\nusing com.robotraconteur.geometry.Point\nusing com.robotraconteur.geometry.Vector3\nusing com.robotraconteur.geometry.Transform\nusing com.robotraconteur.geometry.SpatialInertia\nusing com.robotraconteur.geometry.Pose\nusing com.robotraconteur.geometry.SpatialVelocity\nusing com.robotraconteur.geometry.SpatialAcceleration\nusing com.robotraconteur.sensordata.SensorDataHeader\nusing com.robotraconteur.device.DeviceInfo\nusing com.robotraconteur.signal.SignalInfo\nusing com.robotraconteur.robotics.joints.JointInfo\nusing com.robotraconteur.robotics.tool.ToolInfo\nusing com.robotraconteur.robotics.payload.PayloadInfo\nusing com.robotraconteur.param.ParameterInfo\nusing com.robotraconteur.robotics.trajectory.TrajectoryStatus\nusing com.robotraconteur.robotics.trajectory.JointTrajectory\nusing com.robotraconteur.identifier.Identifier\nusing com.robotraconteur.action.ActionStatusCode\nusing com.robotraconteur.eventlog.EventLogMessageHeader\n\nenum RobotType\nunknown = 0,\nserial = 1,\ndual_arm,\ndifferential_drive,\nplanar,\nfloating,\nfreeform,\nother\nend\n\nenum RobotCommandMode\ninvalid_state = -1,\nhalt = 0,\njog,\ntrajectory,\nposition_command,\nvelocity_command,\nhoming\nend\n\nenum RobotOperationalMode\nundefined = 0,\nmanual_reduced_speed,\nmanual_full_speed,\nauto,\ncobot\nend\n\nenum RobotControllerState\nundefined = 0,\ninit = 1,\nmotor_on,\nmotor_off,\nguard_stop,\nemergency_stop,\nemergency_stop_reset\nend\n\nenum RobotCapabilities\nunknown = 0,\njog_command = 0x1,\ntrajectory_command = 0x2,\nposition_command = 0x4,\nvelocity_command = 0x8,\nhoming_command = 0x10,\nsoftware_reset_errors = 0x20,\nsoftware_enable = 0x40\nend\n\nenum RobotStateFlags\nunknown = 0,\nerror = 0x1,\nfatal_error = 0x2,\nestop = 0x4,\nestop_button1 = 0x8,\nestop_button2 = 0x10,\nestop_button3 = 0x20,\nestop_button4 = 0x40,\nestop_guard1 = 0x80,\nestop_guard2 = 0x100,\nestop_guard3 = 0x200,\nestop_guard4 = 0x400,\nestop_software = 0x800,\nestop_fault = 0x1000,\nestop_internal = 0x2000,\nestop_other = 0x4000,\nestop_released = 0x8000,\nenabling_switch = 0x10000,\nenabled = 0x20000,\nready = 0x40000,\nhomed = 0x80000,\nhoming_required = 0x100000,\ncommunication_failure = 0x200000,\nvalid_position_command = 0x1000000,\nvalid_velocity_command = 0x2000000,\ntrajectory_running = 0x4000000\nend\n\nstruct RobotKinChainInfo\nfield Identifier kin_chain_identifier\nfield Vector3[] H\nfield Vector3[] P\nfield SpatialInertia[] link_inertias\nfield Identifier{list} link_identifiers\nfield uint32[] joint_numbers\nfield Pose flange_pose\nfield Identifier flange_identifier\nfield ToolInfo current_tool\nfield PayloadInfo current_payload\nfield SpatialVelocity tcp_max_velocity\nfield SpatialAcceleration tcp_max_acceleration\nfield varvalue{string} extended\nend\n\nstruct RobotInfo\nfield DeviceInfo device_info\nfield RobotType robot_type\nfield JointInfo{list} joint_info\nfield RobotKinChainInfo{list} chains\nfield uint32 robot_capabilities\nfield SignalInfo{list} signal_info\nfield ParameterInfo{list} parameter_info\nfield uint16 config_seqno\nfield varvalue{string} extended\nend\n\nstruct RobotState\nfield uint64 seqno\nfield RobotCommandMode command_mode\nfield RobotOperationalMode operational_mode\nfield RobotControllerState controller_state\nfield uint64 robot_state_flags\nfield double[] joint_position\nfield double[] joint_velocity\nfield double[] joint_effort\nfield double[] joint_position_command\nfield double[] joint_velocity_command\nfield Pose[] kin_chain_tcp\nfield SpatialVelocity[] kin_chain_tcp_vel\nfield bool trajectory_running\nend\n\nstruct AdvancedRobotState\nfield uint64 seqno\nfield RobotCommandMode command_mode\nfield RobotOperationalMode operational_mode\nfield RobotControllerState controller_state\nfield uint64 robot_state_flags\nfield double[] joint_position\nfield double[] joint_velocity\nfield double[] joint_effort\nfield double[] joint_position_command\nfield double[] joint_velocity_command\nfield uint8[] joint_position_units\nfield uint8[] joint_effort_units\nfield Pose[] kin_chain_tcp\nfield SpatialVelocity[] kin_chain_tcp_vel\nfield bool trajectory_running\nfield double trajectory_time\nfield double trajectory_max_time\nfield uint32 trajectory_current_waypoint\nfield uint16 config_seqno\nend\n\nstruct RobotStateSensorData\nfield SensorDataHeader data_header\nfield AdvancedRobotState robot_state\nend\n\nstruct RobotJointCommand\nfield uint64 seqno\nfield uint64 state_seqno\nfield double[] command\n# Use JointUnits values\nfield uint8[] units\nend\n\nobject Robot\nproperty RobotInfo robot_info [readonly,nolock]\nproperty RobotCommandMode command_mode [nolockread]\nproperty RobotOperationalMode operational_mode [readonly, nolock]\nproperty RobotControllerState controller_state [readonly, nolock]\nproperty EventLogMessageHeader{list} current_errors [readonly, nolock]\nfunction void halt() [urgent]\nfunction void enable()\nfunction void disable() [urgent]\nfunction void reset_errors()\nproperty double speed_ratio\nfunction void jog_joint(double[] joint_position, double[] max_velocity, bool relative, bool wait)\nfunction void jog_cartesian(Pose{int32} target_pose, SpatialVelocity{int32} max_velocity, bool relative, bool wait)\nfunction TrajectoryStatus{generator} execute_trajectory(JointTrajectory trajectory)\nwire RobotState robot_state [readonly,nolock]\nwire AdvancedRobotState advanced_robot_state [readonly,nolock]\npipe RobotStateSensorData robot_state_sensor_data [readonly,nolock]\nproperty uint32 update_downsample [perclient]\nproperty double update_rate [readonly]\nwire RobotJointCommand position_command [writeonly]\nwire RobotJointCommand velocity_command [writeonly]\nfunction ActionStatusCode{generator} home()\nfunction double[] getf_signal(string signal_name)\nfunction void setf_signal(string signal_name, double[] value)\nfunction void tool_attached(int32 chain, ToolInfo tool)\nfunction void tool_detached(int32 chain, string tool_name)\nevent tool_changed(int32 chain, string tool_name)\nfunction void payload_attached(int32 chain, PayloadInfo payload, Pose pose)\nfunction void payload_detached(int32 chain, string payload_name)\nevent payload_changed(int32 chain, string payload_name)\nfunction varvalue getf_param(string param_name)\nfunction void setf_param(string param_name, varvalue value)\nevent param_changed(string param_name)\nend\n\n\n\n";
     return s;
     }
     public override string GetServiceName() {return "com.robotraconteur.robotics.robot";}
@@ -20377,15 +20389,15 @@ public class Robot_stub : ServiceStub , Robot {
         MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackEnum<RobotControllerState>("value",value));
         MessageEntry mr=await ProcessRequest(m, cancel);
         }
-    public async Task<List<RobotErrorCategory>> get_current_errors(CancellationToken cancel=default(CancellationToken)) {
+    public async Task<List<com.robotraconteur.eventlog.EventLogMessageHeader>> get_current_errors(CancellationToken cancel=default(CancellationToken)) {
         MessageEntry m = new MessageEntry(MessageEntryType.PropertyGetReq, "current_errors");
         MessageEntry mr=await ProcessRequest(m, cancel);
         MessageElement me=mr.FindElement("value");
-        return MessageElementUtil.UnpackList<RobotErrorCategory>(rr_node, rr_context, me);
+        return MessageElementUtil.UnpackList<com.robotraconteur.eventlog.EventLogMessageHeader>(rr_node, rr_context, me);
         }
-    public async Task set_current_errors(List<RobotErrorCategory> value, CancellationToken cancel=default(CancellationToken)) {
+    public async Task set_current_errors(List<com.robotraconteur.eventlog.EventLogMessageHeader> value, CancellationToken cancel=default(CancellationToken)) {
         MessageEntry m=new MessageEntry(MessageEntryType.PropertySetReq,"current_errors");
-        MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackListType<RobotErrorCategory>(rr_node, rr_context, "value",value));
+        MessageElementUtil.AddMessageElement(m,MessageElementUtil.PackListType<com.robotraconteur.eventlog.EventLogMessageHeader>(rr_node, rr_context, "value",value));
         MessageEntry mr=await ProcessRequest(m, cancel);
         }
     public async Task<double> get_speed_ratio(CancellationToken cancel=default(CancellationToken)) {
@@ -20644,8 +20656,8 @@ public class Robot_skel : ServiceSkel {
     }
     case "current_errors":
     {
-    List<RobotErrorCategory> ret=await obj.get_current_errors();
-    mr.AddElement(MessageElementUtil.PackListType<RobotErrorCategory>(rr_node, rr_context, "value",ret));
+    List<com.robotraconteur.eventlog.EventLogMessageHeader> ret=await obj.get_current_errors();
+    mr.AddElement(MessageElementUtil.PackListType<com.robotraconteur.eventlog.EventLogMessageHeader>(rr_node, rr_context, "value",ret));
     break;
     }
     case "speed_ratio":
@@ -20698,7 +20710,7 @@ public class Robot_skel : ServiceSkel {
     }
     case "current_errors":
     {
-    await obj.set_current_errors(MessageElementUtil.UnpackList<RobotErrorCategory>(rr_node, rr_context, me));
+    await obj.set_current_errors(MessageElementUtil.UnpackList<com.robotraconteur.eventlog.EventLogMessageHeader>(rr_node, rr_context, me));
     break;
     }
     case "speed_ratio":
@@ -21029,10 +21041,10 @@ public class Robot_default_impl : Robot{
     public virtual Task set_controller_state(RobotControllerState value, CancellationToken cancel=default(CancellationToken)) {
     throw new NotImplementedException();
     }
-    public virtual Task<List<RobotErrorCategory>> get_current_errors(CancellationToken cancel=default(CancellationToken)) {
+    public virtual Task<List<com.robotraconteur.eventlog.EventLogMessageHeader>> get_current_errors(CancellationToken cancel=default(CancellationToken)) {
     throw new NotImplementedException();
     }
-    public virtual Task set_current_errors(List<RobotErrorCategory> value, CancellationToken cancel=default(CancellationToken)) {
+    public virtual Task set_current_errors(List<com.robotraconteur.eventlog.EventLogMessageHeader> value, CancellationToken cancel=default(CancellationToken)) {
     throw new NotImplementedException();
     }
     public virtual Task<double> get_speed_ratio(CancellationToken cancel=default(CancellationToken)) {

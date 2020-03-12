@@ -27,16 +27,17 @@ using System.Threading.Tasks;
 using com.robotraconteur.geometry;
 using com.robotraconteur.action;
 using com.robotraconteur.robotics.trajectory;
+using Rox = GeneralRoboticsToolbox;
 
-namespace RobotRaconteurWeb.Robot
+namespace RobotRaconteurWeb.StandardRobDefLib.Robot
 {
     public abstract class AbstractRobot : Robot_default_impl, IDisposable
     {        
         protected internal int _joint_count;
         protected internal string[] _joint_names;
-        protected const double _jog_joint_limit = Math.PI * (15.0 / 180.0);
+        protected const double _jog_joint_limit = Math.PI * (10000.0 / 180.0);
         protected const long _jog_joint_timeout = 5000; // milliseconds
-        protected const double _jog_joint_tol = Math.PI * (0.1 / 180.0);
+        protected const double _jog_joint_tol = Math.PI * (0.5 / 180.0);
         protected internal double _trajectory_error_tol = Math.PI * (5.0 / 180.0);
                 
         protected internal RobotCommandMode _command_mode = RobotCommandMode.halt;
@@ -70,6 +71,16 @@ namespace RobotRaconteurWeb.Robot
         protected com.robotraconteur.robotics.robot.RobotInfo _robot_info;
 
         protected double _speed_ratio = 1;
+
+        protected bool _uses_homing = false;
+
+        protected bool _has_position_command = false;
+
+        protected bool _has_velocity_command = false;
+
+        protected uint robot_caps;
+
+        protected Rox.Robot rox_robot;
         
         public AbstractRobot(com.robotraconteur.robotics.robot.RobotInfo robot_info, int default_joint_count)
         {            
@@ -85,12 +96,42 @@ namespace RobotRaconteurWeb.Robot
             }
             else
             {
+                if (default_joint_count <= 0)
+                {
+                    throw new ArgumentException("Joints must be specified in RobotInfo structure");
+                }
                 _joint_names = Enumerable.Range(0, default_joint_count).Select(x => $"joint_{x}").ToArray();
             }
 
             _joint_count = _joint_names.Length;
 
             _robot_uuid = robot_info.device_info.device.uuid;
+
+            robot_caps = robot_info.robot_capabilities;
+
+            if ((robot_caps & (uint)RobotCapabilities.homing_command) != 0)
+            {
+                _uses_homing = true;
+            }
+
+            if ((robot_caps & (uint)RobotCapabilities.position_command) != 0)
+            {
+                _has_position_command = true;
+            }
+
+            if ((robot_caps & (uint)RobotCapabilities.velocity_command) != 0)
+            {
+                _has_velocity_command = true;
+            }
+
+            try
+            {
+                rox_robot = RobotInfoConverter.ToToolboxRobot(robot_info, 0); 
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException("invalid robot_info, could not populate GeneralRoboticsToolbox.Robot", e);
+            }
         }
 
         protected bool _keep_going = false;
@@ -115,6 +156,8 @@ namespace RobotRaconteurWeb.Robot
         }
 
         protected Thread _loop_thread;
+
+        protected int _update_period = 10;
         protected virtual void _loop_thread_func()
         { 
             // Use a spin wait loop to get higher timing accurancy
@@ -132,7 +175,7 @@ namespace RobotRaconteurWeb.Robot
                 
                 do
                 {
-                    next_wait += 10;
+                    next_wait += _update_period;
                 }
                 while (next_wait <= now);
 
@@ -255,13 +298,16 @@ namespace RobotRaconteurWeb.Robot
                 f |= (ulong)RobotStateFlags.ready;
             }
 
-            if (_homed)
+            if (_uses_homing)
             {
-                f |= (ulong)RobotStateFlags.homed;
-            }
-            else
-            {
-                f |= (ulong)RobotStateFlags.homing_required;
+                if (_homed)
+                {
+                    f |= (ulong)RobotStateFlags.homed;
+                }
+                else
+                {
+                    f |= (ulong)RobotStateFlags.homing_required;
+                }
             }
 
             if (_wire_position_command_sent)
@@ -515,6 +561,11 @@ namespace RobotRaconteurWeb.Robot
                 }
             }
 
+            if (_command_mode != RobotCommandMode.velocity_command)
+            {
+                //_velocity_command = null;
+            }
+
             switch (_command_mode)
             {
                 case RobotCommandMode.jog:
@@ -550,8 +601,37 @@ namespace RobotRaconteurWeb.Robot
                             return true;
                         }
 
-                        
-                        joint_pos_cmd = _jog_command_pos;
+                        double jog_ratio = 5.0;
+                        for (int i=0; i<_joint_count; i++)
+                        {
+                            double dq = Math.Abs(_jog_command_pos[i] - _jog_current_pos[i]);
+                            if (dq > 1e-6)
+                            {
+                                double r = _jog_max_vel[i] * (_update_period * 1e-3) / Math.Abs(_jog_command_pos[i] - _jog_current_pos[i]);
+                                if (r < jog_ratio)
+                                {
+                                    jog_ratio = r;
+                                }
+                            }
+                        }
+
+                        if (jog_ratio >= 1.0)
+                        {
+                            joint_pos_cmd = _jog_command_pos;
+                        }
+                        else
+                        {
+                            var jog_command_pos2 = new double[_joint_count];
+                            for (int i=0; i<_joint_count; i++)
+                            {
+                                jog_command_pos2[i] = jog_ratio * (_jog_command_pos[i] - _jog_current_pos[i]) + _jog_current_pos[i];
+                            }
+                            for (int i = 0; i < _joint_count; i++)
+                            {
+                                _jog_current_pos[i] = jog_command_pos2[i];
+                            }
+                            joint_pos_cmd = jog_command_pos2;
+                        }                                 
                                                 
                         return true;
                     }
@@ -642,7 +722,7 @@ namespace RobotRaconteurWeb.Robot
 
                         if (vel_cmd == null
                             || vel_cmd.seqno < _wire_velocity_command_last_seqno
-                            || Math.Abs((long)vel_cmd.state_seqno - (long)_state_seqno) > 10
+                            || Math.Abs((long)vel_cmd.state_seqno - (long)_state_seqno) > 50
                             || vel_cmd.command.Length != _joint_count
                             || vel_cmd.units.Length != 0 && vel_cmd.units.Length != _joint_count)
                         {                            
@@ -813,9 +893,37 @@ namespace RobotRaconteurWeb.Robot
                             break;
                         }
                     case RobotCommandMode.halt:
+                        {
+                            _command_mode = value;
+                            break;
+                        }
                     case RobotCommandMode.homing:
+                        {
+                            if (!_uses_homing)
+                            {
+                                throw new InvalidOperationException("Robot does not support homing mode");
+                            }
+                            _command_mode = value;
+                        }
+                        break;
                     case RobotCommandMode.position_command:
+                        {
+                            if (!_has_position_command)
+                            {
+                                throw new InvalidOperationException("Robot does not support position command mode");
+                            }
+                            _command_mode = value;
+                            break;
+                        }
                     case RobotCommandMode.velocity_command:
+                        {
+                            if (!_has_velocity_command)
+                            {
+                                throw new InvalidOperationException("Robot does not support velocity command mode");
+                            }
+                            _command_mode = value;
+                            break;
+                        }
                     case RobotCommandMode.trajectory:
                         _command_mode = value;
                         break;
@@ -828,6 +936,9 @@ namespace RobotRaconteurWeb.Robot
         }
 
         protected double[] _jog_command_pos = null;
+        protected double[] _jog_max_vel = null;
+        protected double[] _jog_start_pos = null;
+        protected double[] _jog_current_pos = null;
         protected long _last_jog_command_pos = 0;
         protected TaskCompletionSource<int> _jog_completion_source;
 
@@ -848,14 +959,14 @@ namespace RobotRaconteurWeb.Robot
                 
                 if (joint_position.Length != _joint_count)
                 {
-                    throw new ArgumentException("joint_position array must have 7 elements");
+                    throw new ArgumentException($"joint_position array must have {_joint_count} elements");
                 }
 
                 if (max_velocity.Length != _joint_count)
                 {
-                    throw new ArgumentException("max_velocity array must have 7 elements");
+                    throw new ArgumentException($"max_velocity array must have {_joint_count} elements");
                 }
-
+                                
                 double[] joint_position2;
                 if (relative)
                 {
@@ -876,6 +987,11 @@ namespace RobotRaconteurWeb.Robot
                     {
                         throw new ArgumentException("Position command must be within 15 degrees from current");
                     }
+
+                    if (max_velocity[i] < 0)
+                    {
+                        throw new ArgumentException("max_vel must be greater than zero");
+                    }
                 }
 
 
@@ -888,6 +1004,9 @@ namespace RobotRaconteurWeb.Robot
                 long now = _stopwatch.ElapsedMilliseconds;
 
                 _jog_command_pos = joint_position2;
+                _jog_current_pos = (double[])_joint_position.Clone();
+                _jog_max_vel = max_velocity;
+                _jog_start_pos = _joint_position;
                 _last_jog_command_pos = now;
 
                 if (!wait)

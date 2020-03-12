@@ -19,7 +19,7 @@ using System.Text;
 using System.Linq;
 using MathNet.Numerics.Interpolation;
 
-namespace RobotRaconteurWeb.Robot
+namespace RobotRaconteurWeb.StandardRobDefLib.Robot
 {
     public class JointTrajectoryInterpolator
     {

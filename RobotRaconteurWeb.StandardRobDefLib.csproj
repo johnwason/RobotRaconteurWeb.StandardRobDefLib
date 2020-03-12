@@ -11,6 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="GeneralRoboticsToolboxNET">
+      <HintPath>..\RoboticsToolbox\GeneralRoboticsToolboxC-\GeneralRoboticsToolboxNET\bin\Debug\netstandard2.0\GeneralRoboticsToolboxNET.dll</HintPath>
+    </Reference>
     <Reference Include="RobotRaconteurWeb">
       <HintPath>..\RobotRaconteurWeb\RobotRaconteurWeb\bin\Debug\netstandard2.1\RobotRaconteurWeb.dll</HintPath>
     </Reference>

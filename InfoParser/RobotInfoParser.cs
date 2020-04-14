@@ -28,7 +28,7 @@ namespace RobotRaconteurWeb.InfoParser
     public class YamlRobotInfo
     {
         public YamlDeviceInfo device_info { get; set; }
-        public com.robotraconteur.robotics.robot.RobotType robot_type { get; set; }
+        public com.robotraconteur.robotics.robot.RobotTypeCode robot_type { get; set; }
         public List<YamlJointInfo> joint_info { get; set; }
         public List<YamlRobotKinChainInfo> chains { get; set; }
         public List<com.robotraconteur.robotics.robot.RobotCapabilities> robot_capabilities { get; set; }

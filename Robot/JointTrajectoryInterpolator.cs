@@ -58,9 +58,9 @@ namespace RobotRaconteurWeb.StandardRobDefLib.Robot
                 throw new ArgumentException("Waypoint list must not be null");
             }
 
-            if (traj.waypoints.Count < 2)
+            if (traj.waypoints.Count < 5)
             {
-                throw new ArgumentException("Waypoint list must contain two or more waypoints");
+                throw new ArgumentException("Waypoint list must contain five or more waypoints");
             }
 
             if (traj.waypoints[0].time_from_start != 0)
